@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Board Compact</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-2">
+    <div class="sticky top-0 bg-gray-100 pb-2 z-10 border-b border-gray-300 flex gap-2">
+        <input type="text" id="techSearch" placeholder="🔍 Szukaj technologii (np. Python)..." 
+               class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-2 focus:ring-blue-400 outline-none">
+        <button id="topBtn" onclick="toggleTop()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300 transition shadow-sm whitespace-nowrap">
+            Pokazuj wszystkie
+        </button>
+    </div>
+
+    <div id="jobList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+        </div>
+
+    <script>
+        let allJobs = [];
+        let showOnlyTop = false;
+
+        async function fetchJobs() {
+            const tech = document.getElementById('techSearch').value;
+            const res = await fetch(`/oferty/?tech=${tech}`);
+            allJobs = await res.json();
+            
+            // Sortujemy domyślnie od najwyższej oceny
+            allJobs.sort((a, b) => b.priorytet - a.priorytet);
+            renderJobs();
+        }
+
+        function toggleTop() {
+            showOnlyTop = !showOnlyTop;
+            const btn = document.getElementById('topBtn');
+            if (showOnlyTop) {
+                btn.innerText = "⭐ Tylko hity (Top)";
+                btn.classList.replace('bg-gray-200', 'bg-green-500');
+                btn.classList.replace('text-gray-700', 'text-white');
+                btn.classList.replace('hover:bg-gray-300', 'hover:bg-green-600');
+            } else {
+                btn.innerText = "Pokazuj wszystkie";
+                btn.classList.replace('bg-green-500', 'bg-gray-200');
+                btn.classList.replace('text-white', 'text-gray-700');
+                btn.classList.replace('hover:bg-green-600', 'hover:bg-gray-300');
+            }
+            renderJobs();
+        }
+
+        function renderJobs() {
+            const list = document.getElementById('jobList');
+            let jobsToRender = allJobs;
+            
+            // Przycisk Top filtruje teraz oferty z wynikiem minimum 50
+            if (showOnlyTop) {
+                jobsToRender = jobsToRender.filter(j => j.priorytet >= 50);
+            }
+
+            list.innerHTML = jobsToRender.map(j => {
+                // Kolorowanie ramki dla nowej skali do 100
+                let borderColor = "border-gray-200 bg-white"; // Domyślnie
+                if (j.priorytet >= 75) borderColor = "border-green-400 bg-green-50";
+                else if (j.priorytet >= 40) borderColor = "border-yellow-400 bg-yellow-50";
+                else if (j.priorytet <= 0) borderColor = "border-red-200 bg-gray-50 opacity-50";
+
+                return `
+                <div class="p-3 border rounded transition text-xs ${borderColor}">
+                    <div class="flex justify-between items-start mb-1">
+                        <h2 class="font-bold text-gray-800 truncate" title="${j.stanowisko}">${j.stanowisko}</h2>
+                        <span class="text-[11px] font-bold ${j.priorytet >= 75 ? 'text-green-600' : 'text-gray-500'}">
+                            ⭐ ${j.priorytet}/100
+                        </span>
+                    </div>
+                    <div class="text-gray-600 mb-1 truncate font-medium">${j.firma}</div>
+                    <div class="flex justify-between items-center text-gray-500 mb-2">
+                        <span class="truncate">💰 ${j.wynagrodzenie || '-'}</span>
+                        <span class="truncate ml-2">📍 ${j.dodatkowe_info || '-'}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        ${j.technologie ? j.technologie.split(',').slice(0, 4).map(t => 
+                            `<span class="bg-white border border-gray-200 px-1 py-0.5 rounded text-[10px] text-gray-600">${t.trim()}</span>`
+                        ).join('') : ''}
+                    </div>
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-200 border-opacity-50">
+                        <span class="text-[9px] uppercase text-gray-400 font-bold">${j.zrodlo}</span>
+                        <a href="${j.link}" target="_blank" class="text-blue-600 hover:underline text-[10px] font-bold">ZOBACZ OFERTĘ</a>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        document.getElementById('techSearch').addEventListener('input', fetchJobs);
+        fetchJobs();
+    </script>
+</body>
+</html>
