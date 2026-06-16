@@ -1,0 +1,10 @@
+# Baza danych
+*.db
+
+# Środowisko wirtualne
+venv/
+__pycache__/
+
+# Logi
+*.log
+cron_log.txt
